@@ -1,0 +1,2292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Halo Voice — The AI receptionist for modern clinics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #F6EEE2;
+  --bg-mid: #FBF4E8;
+  --bg-card: rgba(255, 255, 255, 0.62);
+  --bg-card-hover: rgba(255, 255, 255, 0.85);
+  --border: rgba(58, 36, 71, 0.10);
+  --border-strong: rgba(58, 36, 71, 0.20);
+  --text: #2D1B3D;
+  --text-dim: rgba(45, 27, 61, 0.62);
+  --text-muted: rgba(45, 27, 61, 0.42);
+  --ink: #2D1B3D;
+  --coral: #E48562;
+  --coral-deep: #C45D38;
+  --peach: #F5B997;
+  --lavender: #A98FCE;
+  --sage: #6F9869;
+  --rose: #C97389;
+  --amber: #C9963B;
+  --shadow-sm: 0 1px 2px rgba(58, 36, 71, 0.04), 0 2px 8px rgba(58, 36, 71, 0.04);
+  --shadow-md: 0 4px 12px rgba(58, 36, 71, 0.06), 0 12px 32px rgba(58, 36, 71, 0.08);
+  --shadow-lg: 0 20px 60px rgba(58, 36, 71, 0.10), 0 40px 80px -20px rgba(58, 36, 71, 0.16);
+  --serif: 'Instrument Serif', 'Times New Roman', serif;
+  --sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'Geist Mono', 'SF Mono', Menlo, monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg-deep);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea, select { font-family: inherit; }
+
+/* ============ AURORA BACKGROUND ============ */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 80% 60% at 18% 8%, rgba(228, 133, 98, 0.32), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 92% 22%, rgba(169, 143, 206, 0.28), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 50% 100%, rgba(201, 115, 137, 0.22), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 78%, rgba(111, 152, 105, 0.18), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 75% 55%, rgba(245, 185, 151, 0.22), transparent 60%),
+    var(--bg-deep);
+}
+
+.aurora::before {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 40% 50% at 30% 30%, rgba(228, 133, 98, 0.18), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 70% 70%, rgba(169, 143, 206, 0.14), transparent 60%);
+  filter: blur(40px);
+  animation: drift 30s ease-in-out infinite alternate;
+}
+
+.aurora::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+  opacity: 0.04;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  100% { transform: translate(5%, -3%) rotate(8deg); }
+}
+
+/* ============ SCREEN SYSTEM ============ */
+.screen {
+  display: none;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.screen.active {
+  display: block;
+  animation: screenIn 0.7s var(--ease);
+}
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============ SHARED COMPONENTS ============ */
+.brand {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-style: italic;
+  font-size: 1.6rem;
+  letter-spacing: -0.02em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35em;
+}
+
+.brand::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--peach), var(--coral) 60%, transparent 70%);
+  box-shadow: 0 0 12px var(--coral), 0 0 24px rgba(244, 165, 130, 0.4);
+  display: inline-block;
+  align-self: center;
+  animation: halo 3s ease-in-out infinite;
+}
+
+@keyframes halo {
+  0%, 100% { box-shadow: 0 0 12px var(--coral), 0 0 24px rgba(244, 165, 130, 0.4); }
+  50% { box-shadow: 0 0 20px var(--coral), 0 0 40px rgba(244, 165, 130, 0.6); }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  padding: 0.85rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  transition: all 0.3s var(--ease);
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-deep) 100%);
+  color: #FFF8F0;
+  box-shadow: 0 4px 16px rgba(196, 93, 56, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(196, 93, 56, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.btn-ghost {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.btn-link {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(244, 236, 227, 0.2);
+  transition: all 0.2s var(--ease);
+}
+
+.btn-link:hover { color: var(--text); text-decoration-color: var(--coral); }
+
+.input {
+  width: 100%;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.25s var(--ease);
+  backdrop-filter: blur(20px);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: 0 0 0 4px rgba(244, 165, 130, 0.12);
+  background: var(--bg-card-hover);
+}
+
+.input::placeholder { color: var(--text-muted); }
+
+.label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+/* ============ LANDING PAGE ============ */
+.landing-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2.5rem;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  background: linear-gradient(180deg, rgba(246, 238, 226, 0.78), rgba(246, 238, 226, 0.20));
+  border-bottom: 1px solid var(--border);
+}
+
+.landing-nav-links {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.landing-nav-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s var(--ease);
+}
+
+.landing-nav-links a:hover { color: var(--text); }
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8rem 2rem 4rem;
+  position: relative;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-bottom: 2rem;
+  backdrop-filter: blur(20px);
+  letter-spacing: 0.02em;
+}
+
+.hero-eyebrow .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage);
+  box-shadow: 0 0 8px var(--sage);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.hero-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  max-width: 14ch;
+  margin-bottom: 1.5rem;
+}
+
+.hero-title em {
+  font-style: italic;
+  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-deep) 50%, var(--rose) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero-sub {
+  max-width: 52ch;
+  font-size: 1.15rem;
+  color: var(--text-dim);
+  margin-bottom: 2.5rem;
+  line-height: 1.55;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 4rem;
+}
+
+.integrations {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.integrations-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.integration-row {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.integration {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-style: italic;
+  color: var(--text-dim);
+  letter-spacing: -0.01em;
+  transition: color 0.3s var(--ease);
+}
+
+.integration:hover { color: var(--text); }
+
+.features {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 6rem 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.feature {
+  padding: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.4s var(--ease);
+}
+
+.feature:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.feature-icon {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+}
+
+.feature-title {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.feature-desc { color: var(--text-dim); font-size: 0.95rem; line-height: 1.55; }
+
+/* ============ MODAL / FORM SCREENS ============ */
+.form-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.form-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem;
+  background: rgba(255, 252, 246, 0.78);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  backdrop-filter: blur(40px);
+  box-shadow: var(--shadow-lg);
+}
+
+.form-card.wide { max-width: 580px; }
+
+.form-step {
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--coral);
+  margin-bottom: 1rem;
+}
+
+.form-title {
+  font-family: var(--serif);
+  font-size: 2.2rem;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin-bottom: 0.75rem;
+}
+
+.form-title em {
+  font-style: italic;
+  color: var(--coral-deep);
+}
+
+.form-sub {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+  line-height: 1.55;
+}
+
+.form-group { margin-bottom: 1.25rem; }
+.form-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; align-items: center; }
+.form-actions .btn-primary { flex: 1; }
+
+.form-foot {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* PMS picker */
+.pms-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.pms-card {
+  padding: 1.2rem 1rem;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s var(--ease);
+}
+
+.pms-card:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+
+.pms-card.selected {
+  border-color: var(--coral);
+  background: rgba(244, 165, 130, 0.08);
+  box-shadow: 0 0 0 4px rgba(244, 165, 130, 0.1);
+}
+
+.pms-card-name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  margin-bottom: 0.15rem;
+}
+
+.pms-card-desc { font-size: 0.72rem; color: var(--text-muted); }
+
+/* Terms */
+.terms-box {
+  padding: 1rem;
+  background: rgba(58, 36, 71, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.terms-box h4 {
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.terms-box h4:first-child { margin-top: 0; }
+
+.terms-box p { margin-bottom: 0.5rem; }
+
+.terms-box::-webkit-scrollbar { width: 4px; }
+.terms-box::-webkit-scrollbar-track { background: transparent; }
+.terms-box::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+.checkbox-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 5px;
+  margin-top: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s var(--ease);
+  flex-shrink: 0;
+  background: var(--bg-card);
+}
+
+.checkbox-row input[type="checkbox"]:checked {
+  background: var(--coral);
+  border-color: var(--coral);
+}
+
+.checkbox-row input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #FFF8F0;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox-row span {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.checkbox-row span strong { color: var(--text); font-weight: 500; }
+
+/* ============ PROVISIONING ============ */
+.provision {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.provision-orb {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  position: relative;
+  margin: 1rem auto 2.5rem;
+  background: radial-gradient(circle at 35% 30%, var(--peach), var(--coral) 50%, transparent 70%);
+  box-shadow: 0 0 80px rgba(244, 165, 130, 0.5), 0 0 160px rgba(232, 160, 176, 0.3);
+  animation: orbPulse 2.5s ease-in-out infinite;
+}
+
+.provision-orb::before, .provision-orb::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 165, 130, 0.3);
+  animation: orbRipple 2.5s ease-out infinite;
+}
+
+.provision-orb::after { animation-delay: 1.25s; }
+
+@keyframes orbPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes orbRipple {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.provision-steps {
+  list-style: none;
+  text-align: left;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.provision-steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.45rem 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  transition: color 0.4s var(--ease);
+}
+
+.provision-steps li.active { color: var(--text); }
+.provision-steps li.done { color: var(--text-dim); }
+
+.provision-steps .check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-muted);
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.4s var(--ease);
+}
+
+.provision-steps li.active .check {
+  border-color: var(--coral);
+  border-top-color: transparent;
+  animation: spin 0.8s linear infinite;
+}
+
+.provision-steps li.done .check {
+  border-color: var(--sage);
+  background: var(--sage);
+}
+
+.provision-steps li.done .check::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 9px;
+  border: solid #FFF8F0;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Number reveal */
+.number-reveal {
+  font-family: var(--mono);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  margin: 1rem 0 2rem;
+  background: linear-gradient(135deg, var(--coral), var(--coral-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+}
+
+.number-reveal span {
+  display: inline-block;
+  animation: digitIn 0.6s var(--ease-snap) backwards;
+}
+
+@keyframes digitIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============ DASHBOARD ============ */
+.dashboard {
+  min-height: 100vh;
+  padding: 1.5rem 2rem 4rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.dash-nav {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dash-nav-item {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--text-dim);
+  transition: all 0.2s var(--ease);
+  cursor: pointer;
+}
+
+.dash-nav-item:hover { color: var(--text); background: var(--bg-card); }
+.dash-nav-item.active { color: var(--text); background: var(--bg-card-hover); }
+
+.dash-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--coral), var(--rose));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1rem;
+  color: #FFF8F0;
+}
+
+/* Number banner */
+.number-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.4rem 1.8rem;
+  background: linear-gradient(135deg, rgba(228, 133, 98, 0.14), rgba(169, 143, 206, 0.08));
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.number-banner-left { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+
+.number-banner-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.number-banner-value {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  background: rgba(168, 197, 160, 0.12);
+  border: 1px solid rgba(168, 197, 160, 0.25);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--sage);
+}
+
+.status-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage);
+  box-shadow: 0 0 8px var(--sage);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Stats grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat {
+  padding: 1.25rem 1.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-family: var(--serif);
+  font-size: 2.4rem;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.stat-value em { font-style: italic; color: var(--coral-deep); }
+
+.stat-change { font-size: 0.78rem; color: var(--sage); margin-top: 0.4rem; }
+
+.stat-value.transitioning {
+  animation: bump 0.6s var(--ease-snap);
+}
+
+@keyframes bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); color: var(--coral-deep); }
+  100% { transform: scale(1); }
+}
+
+/* Main grid */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .main-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.25rem;
+}
+
+.panel-title {
+  font-family: var(--serif);
+  font-size: 1.55rem;
+  letter-spacing: -0.01em;
+}
+
+.panel-title em { font-style: italic; color: var(--coral-deep); }
+
+.panel-meta { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Empty state */
+.empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+}
+
+.empty-icon { font-size: 2.4rem; margin-bottom: 0.75rem; opacity: 0.7; }
+
+.empty-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
+  color: var(--text);
+}
+
+.empty-desc { font-size: 0.9rem; color: var(--text-dim); max-width: 32ch; margin: 0 auto; }
+
+/* Recent calls list */
+.calls-list { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.call-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 252, 246, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  animation: rowIn 0.6s var(--ease) backwards;
+}
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.call-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: #FFF8F0;
+  flex-shrink: 0;
+}
+
+.call-info { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.call-name { font-size: 0.95rem; font-weight: 500; }
+.call-detail { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.call-tag {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+.call-tag.book { background: rgba(168, 197, 160, 0.15); color: var(--sage); }
+.call-tag.cancel { background: rgba(232, 160, 176, 0.15); color: var(--rose); }
+.call-tag.reschedule { background: rgba(201, 183, 224, 0.15); color: var(--lavender); }
+.call-tag.note { background: rgba(244, 201, 93, 0.15); color: var(--amber); }
+
+.call-time { font-size: 0.78rem; color: var(--text-muted); font-family: var(--mono); }
+
+/* AI panel */
+.ai-snapshot { display: flex; flex-direction: column; gap: 1rem; }
+
+.ai-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-row:last-child { border-bottom: none; }
+.ai-row-label { font-size: 0.85rem; color: var(--text-dim); }
+.ai-row-value { font-size: 0.92rem; font-weight: 500; }
+
+.ai-voice-bars {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  height: 24px;
+}
+
+.ai-voice-bars span {
+  display: block;
+  width: 3px;
+  background: linear-gradient(to top, var(--coral), var(--peach));
+  border-radius: 2px;
+  animation: bar 1.2s ease-in-out infinite;
+}
+
+.ai-voice-bars span:nth-child(1) { animation-delay: -0.4s; }
+.ai-voice-bars span:nth-child(2) { animation-delay: -0.2s; }
+.ai-voice-bars span:nth-child(3) { animation-delay: 0s; }
+.ai-voice-bars span:nth-child(4) { animation-delay: -0.3s; }
+.ai-voice-bars span:nth-child(5) { animation-delay: -0.1s; }
+
+@keyframes bar {
+  0%, 100% { height: 6px; }
+  50% { height: 22px; }
+}
+
+/* ============ FLOW PROMPTS ============ */
+.flows-panel {
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(228, 133, 98, 0.10), rgba(169, 143, 206, 0.08));
+  border: 1px solid var(--border-strong);
+  border-radius: 22px;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.flows-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.flows-head-text { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.flows-progress {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.flows-progress strong { color: var(--coral-deep); }
+
+.flows-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.flow-btn {
+  position: relative;
+  padding: 1.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s var(--ease);
+  overflow: hidden;
+}
+
+.flow-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(244, 165, 130, 0.08));
+  opacity: 0;
+  transition: opacity 0.3s var(--ease);
+}
+
+.flow-btn:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.flow-btn:hover::before { opacity: 1; }
+
+.flow-btn.completed {
+  background: rgba(168, 197, 160, 0.06);
+  border-color: rgba(168, 197, 160, 0.25);
+}
+
+.flow-btn.completed::after {
+  content: '✓';
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: #0B0817;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-icon { font-size: 1.6rem; margin-bottom: 0.6rem; display: block; }
+
+.flow-name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.flow-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.4; }
+
+/* ============ CALL OVERLAY ============ */
+.call-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(45, 27, 61, 0.30);
+  backdrop-filter: blur(24px);
+}
+
+.call-overlay.active { display: flex; animation: fadeIn 0.3s var(--ease); }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.call-card {
+  width: 100%;
+  max-width: 560px;
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(251, 244, 232, 0.94));
+  border: 1px solid var(--border-strong);
+  border-radius: 28px;
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+  animation: callIn 0.5s var(--ease-snap);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+@keyframes callIn {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.call-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.call-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  background: rgba(244, 165, 130, 0.12);
+  border: 1px solid rgba(244, 165, 130, 0.25);
+  color: var(--coral-deep);
+  transition: all 0.3s var(--ease);
+}
+
+.call-status-pill.connected {
+  background: rgba(168, 197, 160, 0.12);
+  border-color: rgba(168, 197, 160, 0.25);
+  color: var(--sage);
+}
+
+.call-status-pill.completed {
+  background: rgba(201, 183, 224, 0.1);
+  border-color: rgba(201, 183, 224, 0.25);
+  color: var(--lavender);
+}
+
+.call-status-pill .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.call-timer {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.caller-block {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.caller-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.4rem;
+  color: #FFF8F0;
+  flex-shrink: 0;
+}
+
+.caller-name { font-family: var(--serif); font-size: 1.4rem; letter-spacing: -0.01em; line-height: 1.1; }
+.caller-number { font-family: var(--mono); font-size: 0.85rem; color: var(--text-dim); margin-top: 0.2rem; }
+
+/* Waveform */
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 80px;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(58, 36, 71, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.waveform span {
+  display: block;
+  width: 3px;
+  background: linear-gradient(to top, var(--coral), var(--peach));
+  border-radius: 2px;
+  animation: wave 1.4s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%, 100% { height: 8px; opacity: 0.5; }
+  50% { height: var(--h, 40px); opacity: 1; }
+}
+
+.waveform.muted span { animation-play-state: paused; height: 6px; opacity: 0.3; }
+
+/* Transcript */
+.transcript-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.transcript {
+  background: rgba(58, 36, 71, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1rem;
+  max-height: 240px;
+  min-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+  scroll-behavior: smooth;
+}
+
+.transcript::-webkit-scrollbar { width: 4px; }
+.transcript::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+.bubble {
+  max-width: 80%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  animation: bubbleIn 0.3s var(--ease);
+}
+
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.bubble.ai {
+  align-self: flex-start;
+  background: linear-gradient(135deg, rgba(228, 133, 98, 0.20), rgba(245, 185, 151, 0.14));
+  border: 1px solid rgba(228, 133, 98, 0.25);
+  color: var(--coral-deep);
+}
+
+.bubble.caller {
+  align-self: flex-end;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.bubble-speaker {
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+  opacity: 0.75;
+}
+
+/* Outcome card */
+.outcome {
+  display: none;
+  padding: 1rem 1.2rem;
+  background: rgba(168, 197, 160, 0.08);
+  border: 1px solid rgba(168, 197, 160, 0.25);
+  border-radius: 16px;
+  margin-bottom: 1rem;
+  animation: bubbleIn 0.4s var(--ease);
+}
+
+.outcome.show { display: block; }
+
+.outcome-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sage);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.outcome-detail { font-family: var(--mono); font-size: 0.88rem; color: var(--text); }
+
+.call-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* Confetti when all 4 complete */
+.celebrate {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 999;
+  display: none;
+}
+
+.celebrate.show { display: block; }
+
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation: fall 2.5s ease-out forwards;
+}
+
+@keyframes fall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ============ INTEGRATION PAGE (post-onboarding) ============ */
+.integrations-page {
+  display: none;
+  padding: 1rem 0;
+}
+
+.integrations-page.active { display: block; }
+
+.connection-card {
+  padding: 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.connection-info { display: flex; align-items: center; gap: 1rem; }
+
+.connection-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--coral), var(--rose));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: #FFF8F0;
+}
+
+.connection-name { font-family: var(--serif); font-size: 1.3rem; }
+.connection-status { font-size: 0.85rem; color: var(--text-dim); margin-top: 0.15rem; }
+.connection-status .live { color: var(--sage); }
+.connection-status .pending { color: var(--amber); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(120%);
+  padding: 0.85rem 1.2rem;
+  background: rgba(255, 252, 246, 0.96);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow-md);
+  font-size: 0.9rem;
+  z-index: 2000;
+  transition: transform 0.4s var(--ease-snap);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  backdrop-filter: blur(20px);
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 700px) {
+  .landing-nav { padding: 1rem 1.25rem; }
+  .landing-nav-links a:not(.nav-cta) { display: none; }
+  .form-card { padding: 1.75rem; }
+  .pms-grid { grid-template-columns: 1fr; }
+  .dashboard { padding: 1rem; }
+  .dash-nav-item { padding: 0.4rem 0.8rem; font-size: 0.82rem; }
+}
+
+/* Avatar palette helper */
+.av-1 { background: linear-gradient(135deg, var(--peach), var(--coral)); }
+.av-2 { background: linear-gradient(135deg, var(--lavender), var(--rose)); }
+.av-3 { background: linear-gradient(135deg, var(--sage), var(--peach)); }
+.av-4 { background: linear-gradient(135deg, var(--amber), var(--coral)); }
+</style>
+</head>
+<body>
+
+<div class="aurora"></div>
+
+<!-- ====================== SCREEN: LANDING ====================== -->
+<section class="screen active" id="screen-landing">
+  <nav class="landing-nav">
+    <span class="brand">Halo Voice</span>
+    <div class="landing-nav-links">
+      <a href="#features">Features</a>
+      <a href="#integrations">Integrations</a>
+      <a href="#" onclick="goTo('signup'); return false;">Sign in</a>
+      <button class="btn btn-primary nav-cta" onclick="goTo('signup')">Get started</button>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <span class="hero-eyebrow"><span class="dot"></span> Now answering calls in 14 clinics across AU & NZ</span>
+    <h1 class="hero-title">The receptionist that never <em>misses a call</em>.</h1>
+    <p class="hero-sub">Halo Voice is an AI receptionist purpose-built for allied health. It books, cancels, reschedules and routes — directly inside Cliniko, Gensolve and Nookal — while your front desk does the work that actually matters.</p>
+    <div class="hero-cta">
+      <button class="btn btn-primary" onclick="goTo('signup')">Try the simulator <span>→</span></button>
+      <button class="btn btn-ghost" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See how it works</button>
+    </div>
+
+    <div class="integrations" id="integrations">
+      <span class="integrations-label">Connects natively to</span>
+      <div class="integration-row">
+        <span class="integration">Cliniko</span>
+        <span class="integration">Gensolve</span>
+        <span class="integration">Nookal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="features" id="features">
+    <div class="feature">
+      <span class="feature-icon">📞</span>
+      <h3 class="feature-title">Always picks up</h3>
+      <p class="feature-desc">Twenty-four hours a day, in a warm Australian voice. No queue, no missed calls, no apology emails on Monday.</p>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">📅</span>
+      <h3 class="feature-title">Books straight in</h3>
+      <p class="feature-desc">Reads your live availability, books the right practitioner with the right service, and confirms by SMS — no double-handling.</p>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">🔒</span>
+      <h3 class="feature-title">Private by default</h3>
+      <p class="feature-desc">Calls are never used for training. Patient data stays inside your PMS. Australian data residency, end-to-end encrypted.</p>
+    </div>
+    <div class="feature">
+      <span class="feature-icon">✨</span>
+      <h3 class="feature-title">Sounds like you</h3>
+      <p class="feature-desc">We learn the way your clinic actually talks — services, prices, FAQs, vibe — and lift the script as your team evolves.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREEN: SIGN UP ====================== -->
+<section class="screen" id="screen-signup">
+  <div class="form-screen">
+    <div class="form-card">
+      <div class="form-step">Step 01 — Create account</div>
+      <h2 class="form-title">A <em>warm welcome</em> from Halo.</h2>
+      <p class="form-sub">Two minutes to your own simulated receptionist. No card needed.</p>
+
+      <div class="form-group">
+        <label class="label" for="name">Your name</label>
+        <input class="input" id="name" type="text" placeholder="Dr. Sasha Reyes" value="">
+      </div>
+      <div class="form-group">
+        <label class="label" for="clinic">Clinic name</label>
+        <input class="input" id="clinic" type="text" placeholder="Brunswick Physio Co." value="">
+      </div>
+      <div class="form-group">
+        <label class="label" for="email">Work email</label>
+        <input class="input" id="email" type="email" placeholder="sasha@brunswickphysio.com.au" value="">
+      </div>
+      <div class="form-group">
+        <label class="label" for="password">Password</label>
+        <input class="input" id="password" type="password" placeholder="••••••••••••" value="">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="handleSignup()">Continue <span>→</span></button>
+        <button class="btn-link" onclick="goTo('landing')">Back</button>
+      </div>
+
+      <p class="form-foot">By continuing you agree to our Terms & Privacy.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREEN: PMS + API KEY + TERMS ====================== -->
+<section class="screen" id="screen-connect">
+  <div class="form-screen">
+    <div class="form-card wide">
+      <div class="form-step">Step 02 — Connect your PMS</div>
+      <h2 class="form-title">Pick where your <em>diary lives</em>.</h2>
+      <p class="form-sub">Halo writes bookings, cancellations and notes into your existing system. You can skip this for now and connect later from your dashboard.</p>
+
+      <div class="pms-grid" id="pmsGrid">
+        <div class="pms-card" data-pms="Cliniko" onclick="selectPms(this)">
+          <div class="pms-card-name">Cliniko</div>
+          <div class="pms-card-desc">Practice management</div>
+        </div>
+        <div class="pms-card" data-pms="Gensolve" onclick="selectPms(this)">
+          <div class="pms-card-name">Gensolve</div>
+          <div class="pms-card-desc">Allied health suite</div>
+        </div>
+        <div class="pms-card" data-pms="Nookal" onclick="selectPms(this)">
+          <div class="pms-card-name">Nookal</div>
+          <div class="pms-card-desc">Clinic platform</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="label" for="apikey">API key</label>
+        <input class="input" id="apikey" type="password" placeholder="Paste your API key — never shared, encrypted at rest" autocomplete="off">
+      </div>
+
+      <div class="terms-box" tabindex="0">
+        <h4>🔒 How we handle your key</h4>
+        <p>Your API key is encrypted before it ever leaves your browser using AES-256, written to an isolated tenant-specific vault, and only ever decrypted in-memory for the calls Halo makes on your behalf. We never log, replay, or expose your key to third parties. Halo personnel cannot read your key — even in support sessions.</p>
+        <h4>Your responsibility</h4>
+        <p>You are responsible for the security of the key you paste here. That means: rotating it if your PMS account is compromised, scoping it to least privilege where your PMS supports scopes, and revoking it from your PMS provider if you stop using Halo. Pasting a key here authorises Halo to call your PMS on your clinic's behalf — bookings, cancellations, notes — and those actions are your actions.</p>
+        <h4>What Halo does (and doesn't)</h4>
+        <p>Halo will only use your key to read availability, write bookings, and update notes scoped to the practitioners and locations you authorise during setup. Halo will not export patient records, will not train any model on your data, and will not use your key for anything outside the receptionist workflows you've enabled.</p>
+        <h4>Termination</h4>
+        <p>You can disconnect at any time from your dashboard. On disconnect we purge your encrypted key from our vault within 60 seconds and emit a confirmation event you can verify in your PMS audit log.</p>
+      </div>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="agreeTerms">
+        <span>I understand that <strong>I'm responsible</strong> for keeping my API key secure on my side, and I authorise Halo to act on behalf of my clinic using this key.</span>
+      </label>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="handleConnect()">Connect & continue <span>→</span></button>
+        <button class="btn-link" onclick="skipConnect()">Skip for now</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREEN: PROVISIONING ====================== -->
+<section class="screen" id="screen-provision">
+  <div class="form-screen">
+    <div class="form-card">
+      <div class="form-step">Step 03 — Provisioning</div>
+      <h2 class="form-title">Spinning up your <em>receptionist</em>.</h2>
+      <p class="form-sub">This usually takes a few seconds. Hang tight.</p>
+
+      <div class="provision">
+        <div class="provision-orb"></div>
+        <ul class="provision-steps" id="provisionSteps">
+          <li data-step="1"><span class="check"></span> Reserving your dedicated number</li>
+          <li data-step="2"><span class="check"></span> Calibrating voice profile</li>
+          <li data-step="3"><span class="check"></span> Loading clinic context</li>
+          <li data-step="4"><span class="check"></span> Going live</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREEN: NUMBER REVEAL ====================== -->
+<section class="screen" id="screen-number">
+  <div class="form-screen">
+    <div class="form-card">
+      <div class="form-step">Your number is live</div>
+      <h2 class="form-title">Say <em>hello</em> to your new line.</h2>
+      <p class="form-sub">Forward your existing clinic line to this number, or share it directly with patients. For this simulator, just call it from the dashboard.</p>
+
+      <div class="provision" style="padding: 0.5rem 0 1.5rem;">
+        <div class="number-reveal" id="numberReveal"></div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="goTo('dashboard')">Open dashboard <span>→</span></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ====================== SCREEN: DASHBOARD ====================== -->
+<section class="screen" id="screen-dashboard">
+  <div class="dashboard">
+    <header class="dash-header">
+      <div style="display:flex;align-items:center;gap:2rem;">
+        <span class="brand">Halo Voice</span>
+        <nav class="dash-nav">
+          <span class="dash-nav-item active" data-tab="overview" onclick="setTab('overview')">Overview</span>
+          <span class="dash-nav-item" data-tab="integrations" onclick="setTab('integrations')">Integrations</span>
+          <span class="dash-nav-item" data-tab="calls" onclick="alert('Coming soon — full call history view.')">Calls</span>
+          <span class="dash-nav-item" data-tab="settings" onclick="alert('Coming soon — voice, hours, FAQs.')">Settings</span>
+        </nav>
+      </div>
+      <div class="dash-user">
+        <span style="font-size:0.85rem;color:var(--text-dim);" id="userClinicLabel">Brunswick Physio Co.</span>
+        <div class="avatar" id="userAvatar">S</div>
+      </div>
+    </header>
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview">
+      <div class="number-banner">
+        <div class="number-banner-left">
+          <div>
+            <div class="number-banner-label">Your line</div>
+            <div class="number-banner-value" id="numberBanner">+61 3 9000 4256</div>
+          </div>
+          <div>
+            <div class="number-banner-label">PMS</div>
+            <div class="number-banner-value" id="pmsBanner" style="font-size:1rem;">Cliniko · pending</div>
+          </div>
+        </div>
+        <div class="status-pill"><span class="dot"></span> Receptionist online</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Calls today</div>
+          <div class="stat-value" id="statCalls"><em>0</em></div>
+          <div class="stat-change" id="statCallsChange">Waiting on first call</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Bookings made</div>
+          <div class="stat-value" id="statBookings"><em>0</em></div>
+          <div class="stat-change">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Avg. handle time</div>
+          <div class="stat-value" id="statTime"><em>—</em></div>
+          <div class="stat-change">No baseline yet</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Hours saved</div>
+          <div class="stat-value" id="statHours"><em>0.0</em></div>
+          <div class="stat-change">vs. manual reception</div>
+        </div>
+      </div>
+
+      <div class="flows-panel">
+        <div class="flows-head">
+          <div class="flows-head-text">
+            <h3 class="panel-title" style="margin:0;">Try the four <em>core flows</em></h3>
+            <p style="font-size:0.92rem;color:var(--text-dim);">Tap a scenario — watch the call land, the dashboard fill, and the booking written into your diary.</p>
+          </div>
+          <div class="flows-progress"><strong id="flowProgress">0</strong> / 4 completed</div>
+        </div>
+        <div class="flows-grid">
+          <button class="flow-btn" data-flow="book" onclick="startCall('book')">
+            <span class="flow-icon">📅</span>
+            <div class="flow-name">Call to book</div>
+            <div class="flow-desc">A new patient calls in for an initial consult.</div>
+          </button>
+          <button class="flow-btn" data-flow="cancel" onclick="startCall('cancel')">
+            <span class="flow-icon">🚫</span>
+            <div class="flow-name">Call to cancel</div>
+            <div class="flow-desc">Existing patient needs to cancel today's session.</div>
+          </button>
+          <button class="flow-btn" data-flow="reschedule" onclick="startCall('reschedule')">
+            <span class="flow-icon">🔄</span>
+            <div class="flow-name">Call to reschedule</div>
+            <div class="flow-desc">Move an appointment to a different day.</div>
+          </button>
+          <button class="flow-btn" data-flow="note" onclick="startCall('note')">
+            <span class="flow-icon">📝</span>
+            <div class="flow-name">Call to leave a note</div>
+            <div class="flow-desc">Patient wants a message passed to their practitioner.</div>
+          </button>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">Recent <em>calls</em></h3>
+            <span class="panel-meta" id="recentMeta">No calls yet</span>
+          </div>
+          <div id="callsList">
+            <div class="empty" id="callsEmpty">
+              <div class="empty-icon">📭</div>
+              <div class="empty-title">Quiet on the line</div>
+              <div class="empty-desc">As patients call, you'll see them here with a one-line summary, intent and outcome.</div>
+            </div>
+            <div class="calls-list" id="callsRows" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">AI <em>receptionist</em></h3>
+            <span class="panel-meta">Live</span>
+          </div>
+          <div class="ai-snapshot">
+            <div class="ai-row">
+              <span class="ai-row-label">Status</span>
+              <span class="ai-row-value" style="display:inline-flex;align-items:center;gap:0.5rem;">
+                <span class="ai-voice-bars"><span></span><span></span><span></span><span></span><span></span></span>
+                Listening
+              </span>
+            </div>
+            <div class="ai-row">
+              <span class="ai-row-label">Voice</span>
+              <span class="ai-row-value">Eleanor — warm AU</span>
+            </div>
+            <div class="ai-row">
+              <span class="ai-row-label">Knowledge</span>
+              <span class="ai-row-value">12 services · 8 practitioners</span>
+            </div>
+            <div class="ai-row">
+              <span class="ai-row-label">Hours</span>
+              <span class="ai-row-value">24 / 7</span>
+            </div>
+            <div class="ai-row">
+              <span class="ai-row-label">Escalation</span>
+              <span class="ai-row-value">SMS to owner after-hours</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTEGRATIONS TAB -->
+    <div class="integrations-page" id="tab-integrations">
+      <h2 style="font-family:var(--serif);font-size:2rem;margin-bottom:0.5rem;">Connected <em style="font-style:italic;color:var(--coral-deep);">systems</em></h2>
+      <p style="color:var(--text-dim);margin-bottom:1.5rem;max-width:55ch;">Manage your PMS connection. You can update or rotate your API key here at any time — Halo re-encrypts and verifies the connection in seconds.</p>
+
+      <div class="connection-card" id="primaryConnection">
+        <div class="connection-info">
+          <div class="connection-icon">C</div>
+          <div>
+            <div class="connection-name" id="connName">Cliniko</div>
+            <div class="connection-status"><span class="pending" id="connStatus">⚠ Awaiting API key</span></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="document.getElementById('inlineKey').focus()">Update key</button>
+      </div>
+
+      <div class="form-card" style="max-width:580px;margin-top:1.5rem;">
+        <div class="form-step">Update your connection</div>
+        <h3 style="font-family:var(--serif);font-size:1.6rem;margin-bottom:0.5rem;">Paste a fresh <em style="font-style:italic;color:var(--coral-deep);">API key</em>.</h3>
+        <p style="color:var(--text-dim);font-size:0.9rem;margin-bottom:1.25rem;">Same security model as setup — encrypted client-side, you remain responsible for the key on your side.</p>
+        <div class="form-group">
+          <label class="label" for="inlineKey">API key</label>
+          <input class="input" id="inlineKey" type="password" placeholder="Paste fresh key">
+        </div>
+        <label class="checkbox-row">
+          <input type="checkbox" id="inlineAgree">
+          <span>I confirm I'm responsible for this key's security and authorise Halo to use it.</span>
+        </label>
+        <div class="form-actions">
+          <button class="btn btn-primary" onclick="updateInlineKey()">Save & verify</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ====================== CALL OVERLAY ====================== -->
+<div class="call-overlay" id="callOverlay">
+  <div class="call-card">
+    <div class="call-status-row">
+      <span class="call-status-pill" id="callPill"><span class="dot"></span> <span id="callStatusText">Ringing</span></span>
+      <span class="call-timer" id="callTimer">00:00</span>
+    </div>
+
+    <div class="caller-block">
+      <div class="caller-avatar" id="callerAvatar">M</div>
+      <div>
+        <div class="caller-name" id="callerName">—</div>
+        <div class="caller-number" id="callerNumber">—</div>
+      </div>
+    </div>
+
+    <div class="waveform" id="waveform">
+      <span style="--h:42px;animation-delay:0s;"></span>
+      <span style="--h:30px;animation-delay:-0.3s;"></span>
+      <span style="--h:50px;animation-delay:-0.7s;"></span>
+      <span style="--h:38px;animation-delay:-0.1s;"></span>
+      <span style="--h:55px;animation-delay:-0.5s;"></span>
+      <span style="--h:32px;animation-delay:-0.2s;"></span>
+      <span style="--h:48px;animation-delay:-0.8s;"></span>
+      <span style="--h:40px;animation-delay:-0.4s;"></span>
+      <span style="--h:52px;animation-delay:-0.6s;"></span>
+      <span style="--h:34px;animation-delay:-0.9s;"></span>
+      <span style="--h:46px;animation-delay:-0.15s;"></span>
+      <span style="--h:36px;animation-delay:-0.55s;"></span>
+      <span style="--h:50px;animation-delay:-0.25s;"></span>
+      <span style="--h:42px;animation-delay:-0.75s;"></span>
+      <span style="--h:38px;animation-delay:-0.35s;"></span>
+      <span style="--h:54px;animation-delay:-0.05s;"></span>
+      <span style="--h:30px;animation-delay:-0.65s;"></span>
+      <span style="--h:48px;animation-delay:-0.45s;"></span>
+      <span style="--h:40px;animation-delay:-0.85s;"></span>
+      <span style="--h:46px;animation-delay:-0.95s;"></span>
+    </div>
+
+    <div class="transcript-label">Live transcript</div>
+    <div class="transcript" id="transcript"></div>
+
+    <div class="outcome" id="outcome">
+      <div class="outcome-label">✓ <span id="outcomeKind">Booked</span> · written to your PMS</div>
+      <div class="outcome-detail" id="outcomeDetail">—</div>
+    </div>
+
+    <div class="call-actions">
+      <button class="btn btn-ghost" id="callDismiss" onclick="closeCall()" style="display:none;">Done</button>
+      <button class="btn btn-link" onclick="closeCall()" id="callForceClose">End simulation</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><span id="toastIcon">✨</span><span id="toastText">—</span></div>
+
+<!-- Confetti container -->
+<div class="celebrate" id="celebrate"></div>
+
+<script>
+/* ===================== STATE ===================== */
+const state = {
+  user: { name: 'Sasha', clinic: 'Brunswick Physio Co.', initial: 'S' },
+  pms: null,
+  hasKey: false,
+  number: '+61 3 9000 4256',
+  flowsCompleted: new Set(),
+  recentCalls: [],
+  stats: { calls: 0, bookings: 0, totalSeconds: 0, hoursSaved: 0 },
+};
+
+/* ===================== NAVIGATION ===================== */
+function goTo(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById('screen-' + name);
+  if (target) { target.classList.add('active'); window.scrollTo({ top: 0, behavior: 'instant' }); }
+}
+
+/* ===================== SIGN UP ===================== */
+function handleSignup() {
+  const name = document.getElementById('name').value.trim() || 'Sasha Reyes';
+  const clinic = document.getElementById('clinic').value.trim() || 'Brunswick Physio Co.';
+  state.user.name = name.split(' ')[0];
+  state.user.clinic = clinic;
+  state.user.initial = name.charAt(0).toUpperCase();
+  document.getElementById('userAvatar').textContent = state.user.initial;
+  document.getElementById('userClinicLabel').textContent = clinic;
+  goTo('connect');
+}
+
+/* ===================== PMS PICK ===================== */
+function selectPms(card) {
+  document.querySelectorAll('.pms-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  state.pms = card.dataset.pms;
+}
+
+function handleConnect() {
+  if (!state.pms) { toast('⚠️', 'Pick a PMS first — Cliniko, Gensolve or Nookal.'); return; }
+  const key = document.getElementById('apikey').value.trim();
+  const agreed = document.getElementById('agreeTerms').checked;
+  if (!key) { toast('🔑', 'Paste an API key, or use Skip for now.'); return; }
+  if (!agreed) { toast('📋', 'Tick the responsibility box to continue.'); return; }
+  state.hasKey = true;
+  startProvision();
+}
+
+function skipConnect() {
+  state.pms = state.pms || 'Cliniko';
+  state.hasKey = false;
+  startProvision();
+}
+
+/* ===================== PROVISIONING ===================== */
+function startProvision() {
+  goTo('provision');
+  const steps = document.querySelectorAll('#provisionSteps li');
+  steps.forEach(s => s.classList.remove('active', 'done'));
+  let i = 0;
+  steps[0].classList.add('active');
+  const tick = () => {
+    if (i >= steps.length) {
+      revealNumber();
+      return;
+    }
+    setTimeout(() => {
+      steps[i].classList.remove('active');
+      steps[i].classList.add('done');
+      i++;
+      if (i < steps.length) steps[i].classList.add('active');
+      tick();
+    }, 850 + Math.random() * 400);
+  };
+  tick();
+}
+
+function revealNumber() {
+  goTo('number');
+  const numEl = document.getElementById('numberReveal');
+  numEl.innerHTML = '';
+  const digits = state.number.split('');
+  digits.forEach((d, idx) => {
+    const span = document.createElement('span');
+    span.textContent = d;
+    span.style.animationDelay = (idx * 0.06) + 's';
+    numEl.appendChild(span);
+  });
+  document.getElementById('numberBanner').textContent = state.number;
+  const pmsBanner = state.pms + (state.hasKey ? ' · live' : ' · pending');
+  document.getElementById('pmsBanner').textContent = pmsBanner;
+  document.getElementById('connName').textContent = state.pms;
+  document.getElementById('connStatus').className = state.hasKey ? 'live' : 'pending';
+  document.getElementById('connStatus').textContent = state.hasKey ? '● Connected · syncing in real-time' : '⚠ Awaiting API key';
+}
+
+/* ===================== DASHBOARD TABS ===================== */
+function setTab(tab) {
+  document.querySelectorAll('.dash-nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-overview').style.display = tab === 'overview' ? 'block' : 'none';
+  const intPage = document.getElementById('tab-integrations');
+  intPage.classList.toggle('active', tab === 'integrations');
+}
+
+function updateInlineKey() {
+  const key = document.getElementById('inlineKey').value.trim();
+  const agreed = document.getElementById('inlineAgree').checked;
+  if (!key) { toast('🔑', 'Paste an API key first.'); return; }
+  if (!agreed) { toast('📋', 'Confirm responsibility to continue.'); return; }
+  state.hasKey = true;
+  document.getElementById('connStatus').className = 'live';
+  document.getElementById('connStatus').textContent = '● Connected · syncing in real-time';
+  document.getElementById('pmsBanner').textContent = state.pms + ' · live';
+  document.getElementById('inlineKey').value = '';
+  document.getElementById('inlineAgree').checked = false;
+  toast('✨', 'Connected. Halo is now writing into ' + state.pms + '.');
+}
+
+/* ===================== TOAST ===================== */
+let toastTimer = null;
+function toast(icon, text) {
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastText').textContent = text;
+  const t = document.getElementById('toast');
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* ===================== CALL FLOWS ===================== */
+const FLOWS = {
+  book: {
+    caller: { name: 'Sarah Mitchell', number: '+61 412 345 678', initial: 'S', avatar: 'av-1' },
+    intent: 'New patient — initial consult',
+    tag: 'book', tagLabel: 'Booked',
+    outcomeKind: 'Booked',
+    outcomeDetail: 'Initial Consult · Tue 18 May · 2:30 PM with Dr. Chen',
+    summary: 'New patient · Initial consult booked Tue 2:30pm',
+    transcript: [
+      { who: 'ai', text: 'Brunswick Physio, this is Eleanor. How can I help today?' },
+      { who: 'caller', text: 'Hi, I\'m looking to book in for the first time — my back\'s been giving me grief.' },
+      { who: 'ai', text: 'I\'m sorry to hear that. I can get you in. Can I grab your full name and a contact number?' },
+      { who: 'caller', text: 'Sarah Mitchell. The number you\'ve got is fine.' },
+      { who: 'ai', text: 'Lovely, Sarah. For a first visit you\'ll want our 45-minute initial consult. I have Tuesday at 2:30 with Dr. Chen, or Wednesday morning at 9:15. Either work?' },
+      { who: 'caller', text: 'Tuesday afternoon would be ideal.' },
+      { who: 'ai', text: 'Booked you in Tuesday the 18th, 2:30 PM with Dr. Chen. I\'ll text you the address and a quick intake form. See you then.' },
+    ],
+  },
+  cancel: {
+    caller: { name: 'James Patel', number: '+61 423 456 789', initial: 'J', avatar: 'av-2' },
+    intent: 'Cancel today\'s session',
+    tag: 'cancel', tagLabel: 'Cancelled',
+    outcomeKind: 'Cancelled',
+    outcomeDetail: 'Thu 13 May · 10:00 AM follow-up — slot released',
+    summary: 'Cancelled Thu 10am follow-up · slot reopened',
+    transcript: [
+      { who: 'ai', text: 'Brunswick Physio, Eleanor speaking — how can I help?' },
+      { who: 'caller', text: 'Hi, this is James Patel. I need to cancel my Thursday morning appointment, something\'s come up at work.' },
+      { who: 'ai', text: 'No worries, James. I can see your 10 AM Thursday with Mei. Want to cancel outright, or move it to another time?' },
+      { who: 'caller', text: 'Just cancel for now, I\'ll rebook later in the week.' },
+      { who: 'ai', text: 'Done — that\'s cancelled and the slot\'s back in the diary. When you\'re ready to rebook, give us a ring or text this number.' },
+      { who: 'caller', text: 'Perfect, thanks.' },
+      { who: 'ai', text: 'Take care, James.' },
+    ],
+  },
+  reschedule: {
+    caller: { name: 'Linda Thompson', number: '+61 434 567 890', initial: 'L', avatar: 'av-3' },
+    intent: 'Move existing booking',
+    tag: 'reschedule', tagLabel: 'Rescheduled',
+    outcomeKind: 'Rescheduled',
+    outcomeDetail: 'Fri 14 May 3:00 PM → Mon 17 May 3:00 PM with Dr. Chen',
+    summary: 'Moved Fri 3pm → Mon 3pm with Dr. Chen',
+    transcript: [
+      { who: 'ai', text: 'Brunswick Physio, this is Eleanor. How can I help?' },
+      { who: 'caller', text: 'Hi Eleanor, it\'s Linda Thompson. Could I push my Friday 3 PM to next week?' },
+      { who: 'ai', text: 'Of course, Linda. I have your Friday 3 PM with Dr. Chen. Looking at next week — Monday 3 PM is free with Dr. Chen, or Tuesday 11 AM. What suits?' },
+      { who: 'caller', text: 'Monday 3 is perfect, same practitioner please.' },
+      { who: 'ai', text: 'Moved. You\'re now booked Monday the 17th, 3 PM with Dr. Chen. I\'ll send through a confirmation by SMS.' },
+      { who: 'caller', text: 'Wonderful. Thanks Eleanor.' },
+      { who: 'ai', text: 'Anytime. See you Monday.' },
+    ],
+  },
+  note: {
+    caller: { name: 'Marcus Wong', number: '+61 445 678 901', initial: 'M', avatar: 'av-4' },
+    intent: 'Leave message for practitioner',
+    tag: 'note', tagLabel: 'Note',
+    outcomeKind: 'Note logged',
+    outcomeDetail: 'Note attached to Marcus Wong\'s file → Dr. Singh',
+    summary: 'Pre-appointment note logged for Dr. Singh',
+    transcript: [
+      { who: 'ai', text: 'Brunswick Physio, Eleanor speaking.' },
+      { who: 'caller', text: 'Hi, Marcus Wong here. I\'ve got an appointment with Dr. Singh on Wednesday — could you pass on a quick message?' },
+      { who: 'ai', text: 'Absolutely. What would you like Dr. Singh to know before you come in?' },
+      { who: 'caller', text: 'Just that the shoulder pain has shifted from the front to the upper back since last visit, and the stretches she gave me have been helping.' },
+      { who: 'ai', text: 'Got it — pain location\'s moved from anterior shoulder to upper back, and the prescribed stretches are helping. I\'ve attached that to your file so Dr. Singh sees it before Wednesday.' },
+      { who: 'caller', text: 'Brilliant, thank you.' },
+      { who: 'ai', text: 'See you Wednesday, Marcus.' },
+    ],
+  },
+};
+
+let currentCall = null;
+let callTimerInterval = null;
+let callElapsed = 0;
+
+function startCall(flowKey) {
+  if (currentCall) return;
+  const flow = FLOWS[flowKey];
+  currentCall = { key: flowKey, flow, ended: false };
+  callElapsed = 0;
+
+  document.getElementById('callerName').textContent = flow.caller.name;
+  document.getElementById('callerNumber').textContent = flow.caller.number;
+  const avatar = document.getElementById('callerAvatar');
+  avatar.textContent = flow.caller.initial;
+  avatar.className = 'caller-avatar ' + flow.caller.avatar;
+  document.getElementById('transcript').innerHTML = '';
+  document.getElementById('outcome').classList.remove('show');
+  document.getElementById('callDismiss').style.display = 'none';
+  document.getElementById('callForceClose').style.display = 'inline-flex';
+
+  setCallStatus('Ringing', '');
+  document.getElementById('callTimer').textContent = '00:00';
+  document.getElementById('callOverlay').classList.add('active');
+
+  // Ring → connecting → connected
+  setTimeout(() => {
+    if (!currentCall || currentCall.ended) return;
+    setCallStatus('Connecting', '');
+  }, 900);
+
+  setTimeout(() => {
+    if (!currentCall || currentCall.ended) return;
+    setCallStatus('Connected', 'connected');
+    startCallTimer();
+    runTranscript(flow.transcript, 0);
+  }, 1700);
+}
+
+function setCallStatus(text, modifier) {
+  document.getElementById('callStatusText').textContent = text;
+  const pill = document.getElementById('callPill');
+  pill.classList.remove('connected', 'completed');
+  if (modifier) pill.classList.add(modifier);
+}
+
+function startCallTimer() {
+  clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(() => {
+    callElapsed++;
+    const mm = String(Math.floor(callElapsed / 60)).padStart(2, '0');
+    const ss = String(callElapsed % 60).padStart(2, '0');
+    document.getElementById('callTimer').textContent = mm + ':' + ss;
+  }, 1000);
+}
+
+function stopCallTimer() {
+  clearInterval(callTimerInterval);
+  callTimerInterval = null;
+}
+
+function runTranscript(lines, idx) {
+  if (!currentCall || currentCall.ended) return;
+  if (idx >= lines.length) { finishCall(); return; }
+  const line = lines[idx];
+  appendBubble(line.who, line.text);
+  // pacing — short lines short waits
+  const wait = Math.min(4500, 1100 + line.text.length * 28);
+  setTimeout(() => runTranscript(lines, idx + 1), wait);
+}
+
+function appendBubble(who, text) {
+  const t = document.getElementById('transcript');
+  const b = document.createElement('div');
+  b.className = 'bubble ' + who;
+  const speaker = document.createElement('div');
+  speaker.className = 'bubble-speaker';
+  speaker.textContent = who === 'ai' ? 'Eleanor (AI)' : (currentCall.flow.caller.name);
+  const body = document.createElement('div');
+  body.textContent = text;
+  b.appendChild(speaker);
+  b.appendChild(body);
+  t.appendChild(b);
+  t.scrollTop = t.scrollHeight;
+}
+
+function finishCall() {
+  if (!currentCall || currentCall.ended) return;
+  currentCall.ended = true;
+  stopCallTimer();
+  setCallStatus('Completed', 'completed');
+  document.getElementById('waveform').classList.add('muted');
+
+  const flow = currentCall.flow;
+  document.getElementById('outcomeKind').textContent = flow.outcomeKind;
+  document.getElementById('outcomeDetail').textContent = flow.outcomeDetail;
+  document.getElementById('outcome').classList.add('show');
+  document.getElementById('callDismiss').style.display = 'inline-flex';
+  document.getElementById('callForceClose').style.display = 'none';
+
+  // Update dashboard
+  registerCallOutcome(currentCall.key, flow);
+}
+
+function closeCall() {
+  document.getElementById('callOverlay').classList.remove('active');
+  document.getElementById('waveform').classList.remove('muted');
+  stopCallTimer();
+  if (currentCall && !currentCall.ended) {
+    currentCall.ended = true;
+  }
+  currentCall = null;
+}
+
+/* ===================== DASHBOARD UPDATES ===================== */
+function registerCallOutcome(flowKey, flow) {
+  state.flowsCompleted.add(flowKey);
+  state.stats.calls++;
+  if (flowKey === 'book') state.stats.bookings++;
+  state.stats.totalSeconds += callElapsed;
+  state.stats.hoursSaved = +(state.stats.calls * 0.18).toFixed(1);
+  state.recentCalls.unshift({
+    flow: flowKey,
+    name: flow.caller.name,
+    avatar: flow.caller.avatar,
+    initial: flow.caller.initial,
+    summary: flow.summary,
+    tag: flow.tag,
+    tagLabel: flow.tagLabel,
+    time: nowLabel(),
+  });
+  refreshStats();
+  refreshCallsList();
+  refreshFlowButtons();
+
+  // Mark this flow's button as completed
+  const btn = document.querySelector('.flow-btn[data-flow="' + flowKey + '"]');
+  if (btn) btn.classList.add('completed');
+
+  document.getElementById('flowProgress').textContent = state.flowsCompleted.size;
+
+  if (state.flowsCompleted.size === 4) {
+    setTimeout(() => {
+      celebrate();
+      toast('🎉', 'All four flows complete. Halo is officially live.');
+    }, 700);
+  } else {
+    setTimeout(() => toast('✨', flow.tagLabel + ' · written to ' + state.pms), 400);
+  }
+}
+
+function refreshStats() {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    el.classList.add('transitioning');
+    el.innerHTML = val;
+    setTimeout(() => el.classList.remove('transitioning'), 600);
+  };
+  set('statCalls', '<em>' + state.stats.calls + '</em>');
+  set('statBookings', '<em>' + state.stats.bookings + '</em>');
+  const avg = state.stats.calls ? Math.round(state.stats.totalSeconds / state.stats.calls) : 0;
+  const mins = Math.floor(avg / 60);
+  const secs = avg % 60;
+  const avgLabel = state.stats.calls ? (mins ? mins + 'm ' : '') + secs + 's' : '—';
+  set('statTime', '<em>' + avgLabel + '</em>');
+  set('statHours', '<em>' + state.stats.hoursSaved.toFixed(1) + '</em>');
+  document.getElementById('statCallsChange').textContent = state.stats.calls ? '+' + state.stats.calls + ' since you started' : 'Waiting on first call';
+}
+
+function refreshCallsList() {
+  const empty = document.getElementById('callsEmpty');
+  const rows = document.getElementById('callsRows');
+  document.getElementById('recentMeta').textContent = state.recentCalls.length + ' call' + (state.recentCalls.length === 1 ? '' : 's') + ' · today';
+  if (state.recentCalls.length === 0) {
+    empty.style.display = 'block';
+    rows.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  rows.style.display = 'flex';
+  rows.innerHTML = '';
+  state.recentCalls.forEach((c, i) => {
+    const row = document.createElement('div');
+    row.className = 'call-row';
+    row.style.animationDelay = (i * 0.05) + 's';
+    row.innerHTML = `
+      <div class="call-avatar ${c.avatar}">${c.initial}</div>
+      <div class="call-info">
+        <div class="call-name">${c.name}</div>
+        <div class="call-detail">${c.summary}</div>
+      </div>
+      <span class="call-tag ${c.tag}">${c.tagLabel}</span>
+      <span class="call-time">${c.time}</span>
+    `;
+    rows.appendChild(row);
+  });
+}
+
+function refreshFlowButtons() {
+  // already handled inline; nothing else needed for now
+}
+
+function nowLabel() {
+  const d = new Date();
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return h + ':' + m + ampm;
+}
+
+/* ===================== CONFETTI ===================== */
+function celebrate() {
+  const c = document.getElementById('celebrate');
+  c.innerHTML = '';
+  c.classList.add('show');
+  const colors = ['var(--peach)', 'var(--coral)', 'var(--lavender)', 'var(--rose)', 'var(--sage)', 'var(--amber)'];
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('span');
+    piece.className = 'confetti';
+    piece.style.left = Math.random() * 100 + 'vw';
+    piece.style.top = (-10 - Math.random() * 20) + 'vh';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.animationDelay = (Math.random() * 0.6) + 's';
+    piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+    piece.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+    c.appendChild(piece);
+  }
+  setTimeout(() => { c.classList.remove('show'); c.innerHTML = ''; }, 4500);
+}
+
+/* ===================== KEYBOARD ESCAPE ===================== */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('callOverlay').classList.contains('active')) closeCall();
+});
+</script>
+
+</body>
+</html>
